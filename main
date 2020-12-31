@@ -1,0 +1,26 @@
+{
+    "content": "Content",
+    "embeds": [
+        {
+            "author": {
+                "name": "Name",
+                "url": "Url",
+                "icon_url": "Url"
+            },
+            "title": "Title",
+            "url": "Url",
+            "description": "Description",
+            "color": 15258703,
+            "fields": [
+                {
+                    "name": "Description",
+                    "value": "Description"
+                },
+                {
+                	"name" : "Reviewers",
+                	"value": "Reviewers"
+                }
+            ]
+        }
+    ]
+}
