@@ -1,26 +1,64 @@
-{
-    "content": "Content",
-    "embeds": [
-        {
-            "author": {
-                "name": "Name",
-                "url": "Url",
-                "icon_url": "Url"
-            },
-            "title": "Title",
-            "url": "Url",
-            "description": "Description",
-            "color": 15258703,
-            "fields": [
-                {
-                    "name": "Description",
-                    "value": "Description"
+//functions/index.js
+
+const functions = require('firebase-functions');
+const request = require('request-promise');
+
+const DISCORD_WEBHOOK_API = ""
+
+exports.bitbucket = functions.https.onRequest((req, res) => {
+    const event = req.header('x-event-key')
+    if (event == undefined || event.indexOf("pullrequest:") == -1) {
+        return res.status(200).send('Not support');
+    }
+    post(event, req.body)
+        .then(() => {
+            return res.status(200).send('Done');
+        }).catch((err) => {
+            return res.status(200).send('Failed');
+        });
+});
+
+const post = (event, body) => {
+    let event_name = event.replace('pullrequest:', '')
+    let actor = body.actor
+    let pullrequest = body.pullrequest
+    let messages = {
+        content: "[" + actor.display_name + "](" + actor.links.html.href + ") " + event_name + " pull request [#" + pullrequest.id + " ](" + pullrequest.links.html.href + ")",
+        embeds: [
+            {
+                author: {
+                    name: pullrequest.author.display_name,
+                    url: pullrequest.author.links.self.href,
+                    icon_url: pullrequest.author.links.avatar.href
                 },
-                {
-                	"name" : "Reviewers",
-                	"value": "Reviewers"
-                }
-            ]
-        }
-    ]
+                title: pullrequest.title,
+                url: pullrequest.links.html.href,
+                description: '`' + pullrequest.source.branch.name + "` → `" + pullrequest.destination.branch.name + "`",
+                fields: [
+                    ...(pullrequest.description != "" ? [{
+                        name: 'Description',
+                        value: pullrequest.description
+                    }] : []),
+                    ...(pullrequest.participants.length > 0 ?
+                        [{
+                            name: 'Reviewers',
+                            value: pullrequest.participants.map((participant) => {
+                                return (participant.approved ? ":white_check_mark: " : "") + participant.user.display_name
+                            }).sort((a, b) => {
+                                return b.indexOf(":white_check_mark:") - a.indexOf(":white_check_mark:")
+                            }).join(", ")
+                        }] : [])
+                ]
+            }
+        ]
+    }
+
+    return request({
+        method: 'POST',
+        url: DISCORD_WEBHOOK_API,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(messages)
+    })
 }
